@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weekly BTC Post Generator · For Nostr</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --orange: #F7931A;
+      --dark: #0a0a0f;
+      --card: #111118;
+      --border: #1e1e2e;
+      --green: #00e5a0;
+      --red: #ff4d6d;
+      --muted: #6b6b8a;
+      --text: #e8e8f0;
+      --subtext: #d0d0e8;
+    }
+    body {
+      background: var(--dark);
+      color: var(--text);
+      font-family: 'Courier New', monospace;
+      min-height: 100vh;
+      padding: 28px 16px 60px;
+    }
+    .wrap { max-width: 620px; margin: 0 auto; }
+    .header { margin-bottom: 32px; }
+    .header-row { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+    .btc-logo {
+      width: 42px; height: 42px; border-radius: 50%;
+      background: var(--orange); display: flex; align-items: center;
+      justify-content: center; font-size: 20px; font-weight: 900;
+      color: #000; flex-shrink: 0; box-shadow: 0 0 24px #F7931A66;
+    }
+    .header-title { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; color: #fff; }
+    .header-sub { font-size: 10px; color: var(--muted); letter-spacing: 2.5px; text-transform: uppercase; margin-top: 3px; }
+    .header-line { height: 1px; background: linear-gradient(90deg, #F7931A55, transparent); }
+    .section { margin-bottom: 24px; }
+    .section-label { font-size: 11px; font-weight: 700; letter-spacing: 2px; color: var(--orange); text-transform: uppercase; margin-bottom: 10px; }
+    .field-label { font-size: 11px; color: var(--muted); margin-bottom: 5px; letter-spacing: 1px; }
+    input[type="text"], input[type="password"] {
+      width: 100%; padding: 10px 14px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text);
+      font-size: 13px; font-family: 'Courier New', monospace;
+      outline: none; transition: border-color 0.2s; -webkit-appearance: none;
+    }
+    input[type="text"]:focus, input[type="password"]:focus { border-color: var(--orange); }
+    input::placeholder { color: var(--muted); }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .etf-row { display: grid; grid-template-columns: 110px 1fr; gap: 10px; align-items: center; margin-bottom: 9px; }
+    .etf-day { font-size: 12px; color: var(--muted); }
+    .badge { margin-top: 10px; padding: 9px 14px; border-radius: 8px; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+    .badge.green { background: #00e5a012; border: 1px solid #00e5a044; color: var(--green); }
+    .badge.red { background: #ff4d6d12; border: 1px solid #ff4d6d44; color: var(--red); }
+    .badge.hidden { display: none; }
+    .key-wrap { position: relative; }
+    .key-wrap input { padding-right: 60px; }
+    .btn-toggle {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; color: var(--muted);
+      cursor: pointer; font-size: 11px; font-family: 'Courier New', monospace;
+      letter-spacing: 1px;
+    }
+    .key-hint { margin-top: 8px; font-size: 11px; color: var(--muted); }
+    .key-hint a { color: var(--orange); text-decoration: none; }
+    .btn-generate {
+      width: 100%; padding: 15px 0;
+      background: var(--orange); color: #000;
+      border: none; border-radius: 10px;
+      font-size: 13px; font-weight: 700; font-family: 'Courier New', monospace;
+      letter-spacing: 1.5px; cursor: pointer;
+      box-shadow: 0 0 30px #F7931A22, 0 0 60px #F7931A0a;
+      transition: all 0.2s;
+    }
+    .btn-generate:disabled { background: var(--border); color: var(--muted); box-shadow: none; cursor: default; }
+    .hint { text-align: center; margin-top: 14px; font-size: 11px; color: var(--muted); }
+    .error-box {
+      color: var(--red); font-size: 13px; margin-bottom: 16px;
+      padding: 10px 14px; background: #ff4d6d12;
+      border-radius: 8px; border: 1px solid #ff4d6d33; display: none;
+    }
+    #output-section { display: none; }
+    .post-box {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 10px; padding: 20px;
+      font-size: 14px; line-height: 1.8; color: var(--subtext);
+      white-space: pre-wrap; word-break: break-word;
+    }
+    .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+    .btn-copy {
+      padding: 14px 0; background: var(--card); color: #fff;
+      border: 1px solid var(--border); border-radius: 10px;
+      font-size: 13px; font-weight: 700; font-family: 'Courier New', monospace;
+      cursor: pointer; letter-spacing: 0.5px; transition: all 0.2s;
+    }
+    .btn-copy.copied { background: #00e5a020; color: var(--green); border-color: var(--green); }
+    .btn-new {
+      padding: 14px 0; background: var(--orange); color: #000;
+      border: none; border-radius: 10px;
+      font-size: 13px; font-weight: 700; font-family: 'Courier New', monospace;
+      cursor: pointer; letter-spacing: 0.5px; box-shadow: 0 0 30px #F7931A22;
+    }
+    .output-hint { text-align: center; margin-top: 16px; font-size: 11px; color: var(--muted); }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <div class="header-row">
+      <div class="btc-logo">₿</div>
+      <div>
+        <div class="header-title">Weekly BTC Post Generator</div>
+        <div class="header-sub">For Nostr · Powered by Claude AI</div>
+      </div>
+    </div>
+    <div class="header-line"></div>
+  </div>
+
+  <div id="input-section">
+
+```
+<!-- API Key -->
+<div class="section">
+  <div class="section-label">🔑 Anthropic API Key</div>
+  <div class="key-wrap">
+    <input type="password" id="apiKey" placeholder="sk-ant-..." oninput="saveKey()" />
+    <button class="btn-toggle" onclick="toggleKey()">SHOW</button>
+  </div>
+  <div class="key-hint">
+    Get your key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> · Saved in your browser, only sent to Anthropic.
+  </div>
+  <div class="badge hidden" id="keyBadge"></div>
+</div>
+
+<!-- Date Range -->
+<div class="section">
+  <div class="section-label">📅 Week Date Range (Mon – Fri)</div>
+  <input type="text" id="dateRange" placeholder="e.g. Apr 21 – Apr 25, 2026" />
+</div>
+
+<!-- BTC Price -->
+<div class="section">
+  <div class="section-label">₿ Bitcoin Weekly Price (from Farside Investors)</div>
+  <div class="grid-2">
+    <div>
+      <div class="field-label">Opening Price ($)</div>
+      <input type="text" id="btcOpen" placeholder="e.g. 93200" oninput="updateCalc()" />
+    </div>
+    <div>
+      <div class="field-label">Closing Price ($)</div>
+      <input type="text" id="btcClose" placeholder="e.g. 95800" oninput="updateCalc()" />
+    </div>
+  </div>
+  <div class="badge hidden" id="pctBadge"></div>
+</div>
+
+<!-- ETF Flows -->
+<div class="section">
+  <div class="section-label">🏦 ETF Net Daily Flows — in $M (from Farside Investors)</div>
+  <div class="etf-row"><span class="etf-day">Monday</span><input type="text" class="etf-input" placeholder="e.g. 320 or -150" oninput="updateETFTotal()" /></div>
+  <div class="etf-row"><span class="etf-day">Tuesday</span><input type="text" class="etf-input" placeholder="e.g. 320 or -150" oninput="updateETFTotal()" /></div>
+  <div class="etf-row"><span class="etf-day">Wednesday</span><input type="text" class="etf-input" placeholder="e.g. 320 or -150" oninput="updateETFTotal()" /></div>
+  <div class="etf-row"><span class="etf-day">Thursday</span><input type="text" class="etf-input" placeholder="e.g. 320 or -150" oninput="updateETFTotal()" /></div>
+  <div class="etf-row"><span class="etf-day">Friday</span><input type="text" class="etf-input" placeholder="e.g. 320 or -150" oninput="updateETFTotal()" /></div>
+  <div class="badge hidden" id="etfBadge"></div>
+</div>
+
+<div class="error-box" id="errorBox"></div>
+
+<button class="btn-generate" id="generateBtn" onclick="handleGenerate()">⚡ GENERATE NOSTR POST</button>
+<div class="hint">Pull your data from Farside Investors each Saturday before posting</div>
+```
+
+  </div>
+
+  <div id="output-section">
+    <div class="section">
+      <div class="section-label">✅ Your Nostr Post is Ready</div>
+      <div class="post-box" id="postBox"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-copy" id="copyBtn" onclick="handleCopy()">📋 COPY POST</button>
+      <button class="btn-new" onclick="handleNewWeek()">↩ NEW WEEK</button>
+    </div>
+    <div class="output-hint">Copy and paste directly into your Nostr client · Every Saturday at 1PM</div>
+  </div>
+
+</div>
+<script>
+  function parseNum(val) {
+    return parseFloat((val || "").replace(/[^0-9.-]/g, ""));
+  }
+
+function getKey() {
+return document.getElementById(“apiKey”).value.trim() ||
+localStorage.getItem(“btc_nostr_api_key”) || “”;
+}
+
+function saveKey() {
+const key = document.getElementById(“apiKey”).value.trim();
+const badge = document.getElementById(“keyBadge”);
+if (key.startsWith(“sk-ant-”)) {
+localStorage.setItem(“btc_nostr_api_key”, key);
+badge.className = “badge green”;
+badge.innerHTML = “✓ API key saved”;
+} else if (key.length > 0) {
+badge.className = “badge red”;
+badge.innerHTML = “Key should start with sk-ant-…”;
+} else {
+badge.className = “badge hidden”;
+}
+}
+
+function toggleKey() {
+const input = document.getElementById(“apiKey”);
+const btn = document.querySelector(”.btn-toggle”);
+if (input.type === “password”) { input.type = “text”; btn.textContent = “HIDE”; }
+else { input.type = “password”; btn.textContent = “SHOW”; }
+}
+
+function updateCalc() {
+const open = parseNum(document.getElementById(“btcOpen”).value);
+const close = parseNum(document.getElementById(“btcClose”).value);
+const badge = document.getElementById(“pctBadge”);
+if (open && close) {
+const pct = (((close - open) / open) * 100).toFixed(2);
+const up = parseFloat(pct) >= 0;
+badge.className = “badge “ + (up ? “green” : “red”);
+badge.innerHTML = `<span>${up ? "▲" : "▼"}</span><span>Weekly change: <strong>${up ? "+" : ""}${pct}%</strong></span>`;
+} else {
+badge.className = “badge hidden”;
+}
+}
+
+function updateETFTotal() {
+const inputs = document.querySelectorAll(”.etf-input”);
+let total = 0;
+inputs.forEach(inp => { const n = parseNum(inp.value); if (!isNaN(n)) total += n; });
+const badge = document.getElementById(“etfBadge”);
+if (total !== 0) {
+const up = total >= 0;
+badge.className = “badge “ + (up ? “green” : “red”);
+badge.innerHTML = `Weekly ETF Total: <strong>${up ? "+" : ""}${total.toFixed(0)}M USD</strong>`;
+} else {
+badge.className = “badge hidden”;
+}
+}
+
+function getETFSummary() {
+const days = [“Monday”,“Tuesday”,“Wednesday”,“Thursday”,“Friday”];
+const inputs = document.querySelectorAll(”.etf-input”);
+let total = 0;
+const lines = [];
+inputs.forEach((inp, i) => {
+const n = parseNum(inp.value);
+if (!isNaN(n)) total += n;
+lines.push(`${days[i]}: ${inp.value || "N/A"}`);
+});
+return { summary: lines.join(”, “), total };
+}
+
+function showError(msg) {
+const box = document.getElementById(“errorBox”);
+box.textContent = msg; box.style.display = “block”;
+}
+
+function hideError() {
+document.getElementById(“errorBox”).style.display = “none”;
+}
+
+async function handleGenerate() {
+hideError();
+const apiKey = getKey();
+const dateRange = document.getElementById(“dateRange”).value.trim();
+const btcOpen = document.getElementById(“btcOpen”).value.trim();
+const btcClose = document.getElementById(“btcClose”).value.trim();
+const open = parseNum(btcOpen);
+const close = parseNum(btcClose);
+
+```
+if (!apiKey || !apiKey.startsWith("sk-ant-")) {
+  showError("Please enter a valid Anthropic API key (starts with sk-ant-).");
+  return;
+}
+if (!dateRange || !open || !close) {
+  showError("Please fill in the date range, open price, and close price.");
+  return;
+}
+
+const pct = (((close - open) / open) * 100).toFixed(2);
+const { summary: etfSummary, total: weeklyTotal } = getETFSummary();
+const isUp = parseFloat(pct) >= 0;
+
+const btn = document.getElementById("generateBtn");
+btn.disabled = true;
+btn.textContent = "⚡ GENERATING YOUR POST...";
+
+const prompt = `You are a Bitcoin educator writing a short, bold, punchy weekly Nostr post under 150 words. Use this EXACT template structure, filling in the bracketed sections:
+```
+
+⚡ BITCOIN WEEKLY RECAP ⚡
+${dateRange}
+
+━━━━━━━━━━━━━━━━━
+₿ PRICE ACTION
+━━━━━━━━━━━━━━━━━
+Open: $${btcOpen}
+Close: $${btcClose}
+Weekly: ${pct}% ${isUp ? “📈” : “📉”}
+
+[Write exactly 1 sharp, educational sentence about what this price move signals to the market]
+
+━━━━━━━━━━━━━━━━━
+🏦 ETF FLOWS
+━━━━━━━━━━━━━━━━━
+Weekly Net: ${weeklyTotal >= 0 ? “+” : “”}${weeklyTotal.toFixed(0)}M ${weeklyTotal >= 0 ? “🟢” : “🔴”}
+
+[Write exactly 1 sharp, educational sentence about what this institutional flow signals]
+
+━━━━━━━━━━━━━━━━━
+
+[Write 1 punchy question or call-to-action to engage followers]
+
+#Bitcoin #BTC #Nostr
+
+📊 Data: Farside Investors
+⚠️ Not financial advice
+
+Only return the post itself. No preamble, no explanation. Keep it under 150 words total. Make it feel human and bold, not robotic.`;
+
+```
+try {
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true",
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 1000,
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+
+  const rawText = await response.text();
+  let data;
+  try { data = JSON.parse(rawText); }
+  catch { throw new Error("Could not parse response: " + rawText.slice(0, 100)); }
+
+  if (!response.ok) {
+    throw new Error("API " + response.status + ": " + (data?.error?.message || response.statusText));
+  }
+
+  let text = "";
+  if (Array.isArray(data.content)) {
+    text = data.content.map(b => b.text || "").join("").trim();
+  } else if (typeof data.content === "string") {
+    text = data.content.trim();
+  }
+  if (!text) throw new Error("Empty response. Raw: " + rawText.slice(0, 200));
+
+  document.getElementById("postBox").textContent = text;
+  document.getElementById("input-section").style.display = "none";
+  document.getElementById("output-section").style.display = "block";
+
+} catch (e) {
+  showError("Error: " + e.message);
+} finally {
+  btn.disabled = false;
+  btn.textContent = "⚡ GENERATE NOSTR POST";
+}
+```
+
+}
+
+function handleCopy() {
+const text = document.getElementById(“postBox”).textContent;
+navigator.clipboard.writeText(text).then(() => {
+const btn = document.getElementById(“copyBtn”);
+btn.textContent = “✓ COPIED!”;
+btn.classList.add(“copied”);
+setTimeout(() => { btn.textContent = “📋 COPY POST”; btn.classList.remove(“copied”); }, 2000);
+});
+}
+
+function handleNewWeek() {
+document.getElementById(“input-section”).style.display = “block”;
+document.getElementById(“output-section”).style.display = “none”;
+document.getElementById(“dateRange”).value = “”;
+document.getElementById(“btcOpen”).value = “”;
+document.getElementById(“btcClose”).value = “”;
+document.querySelectorAll(”.etf-input”).forEach(i => i.value = “”);
+document.getElementById(“pctBadge”).className = “badge hidden”;
+document.getElementById(“etfBadge”).className = “badge hidden”;
+hideError();
+}
+
+// Load saved API key on page load
+window.addEventListener(“load”, function() {
+const saved = localStorage.getItem(“btc_nostr_api_key”);
+if (saved) {
+document.getElementById(“apiKey”).value = saved;
+const badge = document.getElementById(“keyBadge”);
+badge.className = “badge green”;
+badge.innerHTML = “✓ API key saved”;
+}
+});
+</script>
+
+</body>
+</html>
